@@ -7,6 +7,7 @@
 - Build Supabase view `relationship_profile_context_v` that flattens published snapshots for retrieval pipelines.
 
 ## 2. AI Workflow & Edge Functions
+DO NOT PROCEED WITHOUT ASKING FOR ADDITIONAL INFO
 - Implement Edge Function that listens for `note_saved` events, loads existing profile data, and invokes the AI extraction process.
 - Constrain extraction to explicit statements; validate outputs before persistence (reject inferred facts).
 - Write transactional logic to update facts, summary, evidence metadata, and snapshot rows; handle retries and failure states.

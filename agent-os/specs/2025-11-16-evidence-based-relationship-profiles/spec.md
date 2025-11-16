@@ -29,9 +29,16 @@ Create trustworthy, contact-level relationship profiles that live on the existin
 5. **Versioning:** Maintain `profiles_snapshot` records with `published_at` so message generation can reference the most recent published snapshot atomically.
 
 ## Data Model
+The data layer separates three responsibilities so each concern stays simple and auditable:
+- `relationship_profiles` holds the single “envelope” per contact (summary text, manual-edit flags, pointer to the published snapshot). Think of it as the lightweight header record that is easy to join with contacts.
+- `relationship_profile_facts` stores the actual FORD entries plus their evidence metadata. Multiple rows per category let us capture several facts (e.g., multiple Occupation details) while tracking whether each was auto-generated or user-asserted.
+- `relationship_profile_snapshots` keeps immutable freeze frames that downstream message-generation jobs consume. Snapshots let the UI continue updating live data without exposing half-written facts to long-running generation flows.
+
 Create/extend tables (Supabase PostgreSQL):
 
 ### `relationship_profiles`
+Purpose: the authoritative 1:1 profile header tied to a contact; keeps the latest summary, manual-edit indicators, and which snapshot is published for downstream consumers.
+
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | uuid PK | Generated per contact |
@@ -43,6 +50,8 @@ Create/extend tables (Supabase PostgreSQL):
 | `created_at` / `updated_at` | timestamptz | Managed by triggers |
 
 ### `relationship_profile_facts`
+Purpose: normalized FORD entries with evidence references so we can store multiple facts per category, apply manual overrides, and audit how each fact was produced.
+
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | uuid PK | |
@@ -60,6 +69,8 @@ Create/extend tables (Supabase PostgreSQL):
 | Unique composite (`profile_id`,`category`) enforced only for `user_asserted=false`. For multiple facts per category, maintain ordering via `display_order int`.
 
 ### `relationship_profile_snapshots`
+Purpose: immutable JSON payloads that capture the entire profile state (summary + FORD facts) whenever the system or a user change anything. Message-generation always reads from a published snapshot so it never sees in-flight edits; previous snapshots remain available for audit/history.
+
 Stores immutable JSON used by message generation.
 | Column | Type | Notes |
 | `id` | uuid PK | |
